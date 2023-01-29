@@ -1,0 +1,36 @@
+*{
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+
+.affiche{
+    margin: 1%;
+    width: 30%;
+    height: 40%;
+    box-shadow: 0px 0px 10px #000000;
+}
+.desc{
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 1%;
+    margin: 1%;
+    width: 60%; 
+    margin-left: auto; 
+    background-color: whitesmoke;
+    box-shadow: 0px 0px 15px #000000;
+    text-align: center;
+}
+
+.countainer {
+    width: 100%; 
+  display: flex; 
+}
+
+.download-button {
+    margin-right: 10px;
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
