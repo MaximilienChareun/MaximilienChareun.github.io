@@ -1,1 +1,70 @@
-Max
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Champion Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        #champion-details {
+            display: none;
+        }
+
+        #champion-details img {
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Champion Details</h1>
+        <input type="text" id="champion-name" placeholder="Enter Champion Name" autofocus>
+        <div id="champion-details">
+            <h2 id="champion-title"></h2>
+            <img id="champion-image" src="" alt="Champion Image">
+            <p id="champion-info"></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('champion-name').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                const championName = document.getElementById('champion-name').value.trim().toLowerCase();
+                fetch(`https://ddragon.leagueoflegends.com/cdn/11.6.1/data/en_US/champion/${championName}.json`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const championData = Object.values(data.data)[0];
+                        document.getElementById('champion-title').innerText = championData.title;
+                        document.getElementById('champion-image').src = `https://ddragon.leagueoflegends.com/cdn/11.6.1/img/champion/${championName}.png`;
+                        document.getElementById('champion-info').innerText = championData.blurb;
+                        document.getElementById('champion-details').style.display = 'block';
+                    })
+                    .catch(error => {
+                        alert('Champion not found!');
+                        console.error('Error fetching champion data:', error);
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
