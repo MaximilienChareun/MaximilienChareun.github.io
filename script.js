@@ -1,8 +1,8 @@
 document.getElementById("downloadButton").addEventListener("click", function() {
     // Création d'un élément <a> pour le téléchargement
     var downloadLink = document.createElement("a");
-    downloadLink.setAttribute("href", "antichoco.zip");
-    downloadLink.setAttribute("download", "antichoco.zip");
+    downloadLink.setAttribute("href", "antichoco.raw");
+    downloadLink.setAttribute("download", "antichoco.raw");
     
     // Ajout de l'élément <a> à la page et déclenchement du téléchargement
     document.body.appendChild(downloadLink);
