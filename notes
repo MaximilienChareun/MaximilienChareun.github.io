@@ -1,0 +1,7 @@
+- verouillage de l'ecran pour l'antichoc
+- necessite la dectection de la souris, et la refonte de la fenetre de discution afin que le bouton soit centré à la fenetre
+- ajouter la détection de page importante tel que youtube en cas de fullscreen mise en pause de l'antichoc
+
+- ajouter la détection de la caméra, tout les 1 mintes vérifier si une personne est devant l'ecran
+
+- 10s avant la mise en veille prevenir avec une fenetre de discution "Oui" annule la mise en veille Sans réponse au bout de 10s mise en veille
