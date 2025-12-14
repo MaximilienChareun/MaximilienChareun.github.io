@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyFlix - Qui regarde ?</title>
+    <style>
+        :root { --red: #e50914; --black: #141414; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: black;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .logo { font-size: 5rem; font-weight: 900; color: var(--red); margin-bottom: 60px; }
+        .title { font-size: 3.3rem; margin-bottom: 50px; }
+
+        .profiles { display: flex; gap: 60px; flex-wrap: wrap; justify-content: center; max-width: 1000px; }
+
+        .profile {
+            text-align: center;
+            cursor: pointer;
+            transition: transform .35s ease;
+        }
+        .profile:hover { transform: scale(1.1); }
+
+        /* IMPORTANT : on accepte maintenant .jpg ET .gif */
+        .profile-img {
+            width: 170px;
+            height: 170px;
+            border-radius: 16px;
+            object-fit: cover;
+            border: 5px solid transparent;
+            box-shadow: 0 10px 30px rgba(0,0,0,.7);
+            transition: border .4s;
+            background: #111; /* fond noir si le GIF a de la transparence */
+        }
+        .profile:hover .profile-img {
+            border: 5px solid white;
+        }
+
+        .profile-name {
+            margin-top: 18px;
+            font-size: 1.5rem;
+            color: #ccc;
+        }
+        .profile:hover .profile-name { color: white; }
+
+        /* Popup mot de passe */
+        .password-modal, .loading-screen {
+            position: fixed; inset: 0; background: rgba(0,0,0,.96);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+
+        .password-box {
+            background: #141414;
+            padding: 60px;
+            border-radius: 20px;
+            text-align: center;
+            width: 460px;
+            box-shadow: 0 30px 80px rgba(0,0,0,.9);
+            border: 1px solid #333;
+        }
+
+        /* L'image dans la popup accepte aussi les GIF animés */
+        #modalAvatar {
+            width: 130px;
+            height: 130px;
+            border-radius: 16px;
+            object-fit: cover;
+            margin-bottom: 25px;
+            background: #111;
+        }
+
+        .password-box h3 { font-size: 2.2rem; margin-bottom: 35px; }
+
+        .password-input {
+            width: 100%; padding: 18px; background: #333; border: 1px solid #555;
+            border-radius: 10px; color: white; font-size: 1.4rem; text-align: center;
+            margin-bottom: 20px;
+        }
+        .password-input:focus { outline: none; border-color: var(--red); }
+
+        .btn-enter {
+            background: var(--red); color: white; padding: 16px 60px;
+            border: none; border-radius: 10px; font-size: 1.5rem; font-weight: bold;
+            cursor: pointer; transition: .3s;
+        }
+        .btn-enter:hover { background: #f40612; }
+
+        .error { color: #e87c03; margin-top: 15px; font-size: 1.2rem; display: none; }
+
+        /* Animation de chargement Netflix */
+        .loading-screen { background: black; flex-direction: column; }
+        .netflix-loader {
+            width: 100px; height: 100px; position: relative;
+        }
+        .netflix-loader div {
+            position: absolute; width: 100%; height: 100%; background: var(--red);
+            border-radius: 50%; animation: netflixPulse 1.6s infinite ease-in-out;
+        }
+        .netflix-loader div:nth-child(2) { animation-delay: .2s; }
+        .netflix-loader div:nth-child(3) { animation-delay: .4s; }
+
+        @keyframes netflixPulse {
+            0%, 100% { transform: scale(0); opacity: 1; }
+            50%  { transform: scale(1); opacity: .6; }
+        }
+
+        .loading-text {
+            margin-top: 40px;
+            font-size: 1.8rem;
+            color: var(--red);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="logo">MyFlix</div>
+    <h1 class="title">Qui regarde ?</h1>
+
+    <div class="profiles">
+        <!-- TU PEUX METTRE .jpg OU .gif PARTOUT, ÇA MARCHE DIRECT -->
+        <div class="profile" onclick="askPassword('profile1.jpg', 'Luci')">
+            <img src="profile1.jpg" class="profile-img" alt="Luci">
+            <div class="profile-name">Luci</div>
+        </div>
+
+       <div class="profile" onclick="askPassword('profile2.gif', 'Maman')">
+            <img src="profile2.gif" class="profile-img" alt="Maman">
+            <div class="profile-name">Bean</div>
+        </div>
+
+        <div class="profile" onclick="askPassword('profile3.jpg', 'Jay')">
+            <img src="profile3.jpg" class="profile-img" alt="Jay">
+            <div class="profile-name">Jay</div>
+        </div>
+
+        <div class="profile" onclick="askPassword('profile4.gif', 'Maman')">
+            <img src="profile4.gif" class="profile-img" alt="Maman">
+            <div class="profile-name">Maman</div>
+        </div>
+    </div>
+
+    <!-- Popup mot de passe -->
+    <img> 
+    <div class="password-modal" id="passwordModal">
+        <div class="password-box">
+            <img id="modalAvatar" src="" alt="Avatar">
+            <h3 id="modalName"></h3>
+            <input type="password" class="password-input" id="passwordInput" placeholder="Mot de passe">
+            <div class="error" id="errorMsg">Mot de passe incorrect</div>
+            <button class="btn-enter" onclick="checkPassword()">Entrer</button>
+        </div>
+    </div>
+
+    <!-- Écran de chargement Netflix -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="netflix-loader">
+            <div></div><div></div><div></div>
+        </div>
+        <div class="loading-text">Connexion...</div>
+    </div>
+
+    <script>
+        let selectedProfile = '';
+
+        function askPassword(imgSrc, name) {
+            selectedProfile = name;
+            // L'image dans la popup sera exactement celle cliquée (GIF ou JPG)
+            document.getElementById('modalAvatar').src = imgSrc;
+            document.getElementById('modalName').textContent = name;
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('passwordModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('passwordInput').focus(), 150);
+        }
+
+        function checkPassword() {
+            if (document.getElementById('passwordInput').value === '1234') {
+                document.getElementById('passwordModal').style.display = 'none';
+                document.getElementById('loadingScreen').style.display = 'flex';
+
+                setTimeout(() => {
+                    window.location.href = './main/main.html?user=' + encodeURIComponent(selectedProfile);
+                }, 2200);
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('passwordInput').style.borderColor = '#e87c03';
+            }
+        }
+
+        // Entrée = valider
+        document.getElementById('passwordInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') checkPassword();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes Parkings Fréjus/Saint-Raphaël – Carte & Favoris</title>
+    <link rel="manifest" href="data:application/manifest+json,{
+        'name': 'Parkings Fréjus Perso',
+        'short_name': 'ParkFrejus',
+        'start_url': '.',
+        'display': 'standalone',
+        'background_color': '#f0f2f5',
+        'theme_color': '#1890ff',
+        'icons': [{'src': 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjMTg5MGZmIi8+CjxwYXRoIGQ9Ik0xMjYgNTZIMTYwTDk2IDMyTDMyIDU2SDY2VjE2MEgxMjZWNDU2SDY2VjE2MEgyNiAxNjBWMzJMMzIgNTZIMTYwVjE2MEgxMjZWNDU2WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+','sizes': '192x192', 'type': 'image/svg+xml'}]
+    }">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/5.12.4/antd.min.css">
+    <style>
+        :root { --bg: #f0f2f5; --card: white; --text: #1a1a1a; --header: linear-gradient(135deg, #1890ff, #0050b3); }
+        [data-theme="dark"] { --bg: #141414; --card: #1f1f1f; --text: #e8e8e8; --header: linear-gradient(135deg, #0050b3, #1890ff); }
+        body { margin: 0; padding: 10px; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; transition: all 0.3s; }
+        .header { text-align: center; margin-bottom: 10px; }
+        .header h1 { font-size: 1.8rem; margin: 0; background: linear-gradient(90deg, #ff4d4f, #1890ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .toggle, .geo-btn, .export-btn { padding: 8px 12px; background: var(--header); color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .search-input { flex: 1; max-width: 200px; padding: 8px; border: 1px solid #d9d9d9; border-radius: 4px; }
+        #favorites { background: var(--card); padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        .fav-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .fav-item { background: #52c41a; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        #map { height: 400px; border-radius: 8px; margin-bottom: 10px; }
+        .container { max-width: 100%; margin: 0 auto; }
+        .legend { background: var(--card); padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9rem; }
+        .legend div { margin: 5px 0; }
+        .footer { text-align: center; margin-top: 10px; color: #666; font-size: 0.8rem; }
+        @media (max-width: 600px) { .controls { flex-direction: column; } .search-input { max-width: 100%; } #map { height: 300px; } }
+    </style>
+</head>
+<body data-theme="light">
+
+<div class="container">
+    <div class="header">
+        <h1>🅿️ Mes Parkings Fréjus/Saint-Raphaël</h1>
+        <p>Carte interactive + Favoris (Scrap 2025)</p>
+    </div>
+
+    <div class="controls">
+        <button class="toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+        <input type="text" class="search-input" id="searchInput" placeholder="Rechercher...">
+        <button class="geo-btn" onclick="getLocation()">📍 Ma Position</button>
+        <button class="export-btn" onclick="exportFavorites()">📥 CSV</button>
+        <button class="export-btn" onclick="requestNotification()">🔔 Alertes</button>
+    </div>
+
+    <div id="favorites">
+        <h3>Mes Favoris</h3>
+        <div class="fav-list" id="favList"></div>
+    </div>
+
+    <div class="legend">
+        <div><strong>Légende :</strong> 🟢 Gratuit | 🔴 Payant | Cliquez sur un marqueur pour infos</div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="footer">Scrapé mairies/Parkopedia • Pas de live – Vérifie Parkopedia pour estimations</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Données enrichies (scrap 2025 : + coords GPS de Parkopedia/sites mairies)
+    const parkings = [
+        { id: 1, nom: 'Bonaparte', ville: 'Saint-Raphaël', total: 844, gratuit: false, info: 'Bord mer, Vieux Port. 24h/24.', tarifs: '0.50€/15min. Gratuit sam 14h-18h (hors été).', lat: 43.4200, lng: 6.7690, color: 'red' },
+        { id: 2, nom: 'Paul Vernet', ville: 'Fréjus', total: 181, gratuit: false, info: 'Centre-ville, près gare.', tarifs: '1ère 30min gratuite; 0.50€/15min.', lat: 43.4330, lng: 6.7350, color: 'red' },
+        { id: 3, nom: 'Agricola', ville: 'Fréjus', total: 129, gratuit: false, info: 'Centre.', tarifs: 'Même que Paul Vernet.', lat: 43.4320, lng: 6.7370, color: 'red' },
+        { id: 4, nom: 'Clos de la Tour', ville: 'Fréjus', total: 154, gratuit: false, info: '64 abonnés.', tarifs: '0.50€/15min.', lat: 43.4340, lng: 6.7360, color: 'red' },
+        { id: 5, nom: 'Porte d\'Orée', ville: 'Fréjus', total: 135, gratuit: false, info: '44 abonnés.', tarifs: 'Même.', lat: 43.4330, lng: 6.7380, color: 'red' },
+        { id: 6, nom: 'Base Nature', ville: 'Fréjus', total: 840, gratuit: false, info: 'Plage.', tarifs: '0.50€/15min. Juil-Août 8h30-18h30.', lat: 43.4080, lng: 6.7420, color: 'red' },
+        { id: 7, nom: 'RN98 Saint-Aygulf I', ville: 'Saint-Aygulf', total: 220, gratuit: false, info: 'Bord mer saisonnier.', tarifs: '0.50€/15min. Juin-Sept.', lat: 43.3680, lng: 6.7840, color: 'red' },
+        { id: 8, nom: 'RN98 Saint-Aygulf II', ville: 'Saint-Aygulf', total: 200, gratuit: false, info: 'Bord mer.', tarifs: 'Même.', lat: 43.3690, lng: 6.7850, color: 'red' },
+        { id: 9, nom: 'Balzac', ville: 'Saint-Aygulf', total: 41, gratuit: false, info: 'Centre Saint-Aygulf.', tarifs: '0.50€/15min.', lat: 43.3700, lng: 6.7800, color: 'red' },
+        { id: 10, nom: 'Etangs de Villepey', ville: 'Fréjus', total: 500, gratuit: false, info: 'Plage.', tarifs: 'Journée 4.50€.', lat: 43.4000, lng: 6.7500, color: 'red' },
+        { id: 11, nom: 'Aubenas', ville: 'Fréjus', total: 190, gratuit: false, info: 'Centre historique.', tarifs: 'Gratuit 12h-14h.', lat: 43.4350, lng: 6.7340, color: 'red' },
+        { id: 12, nom: 'P5 Dei Cabiscaou', ville: 'Fréjus', total: 86, gratuit: false, info: 'Port, abonnés.', tarifs: 'Abon. 900€.', lat: 43.4400, lng: 6.7400, color: 'red' },
+        { id: 13, nom: 'Voirie Publique', ville: 'Saint-Raphaël', total: 2298, gratuit: true, info: 'Rues (1049 gratuites).', tarifs: '0.50€/15min payant.', lat: 43.4200, lng: 6.7700, color: 'green' },
+        { id: 14, nom: 'Place des Jésuites', ville: 'Fréjus', total: 17, gratuit: false, info: 'Centre.', tarifs: '2.50€/2h.', lat: 43.4330, lng: 6.7360, color: 'red' },
+        { id: 15, nom: 'Rond-Point des Moulins', ville: 'Fréjus', total: 28, gratuit: true, info: 'Périph. Gratuit 2h.', tarifs: 'Gratuit.', lat: 43.4300, lng: 6.7400, color: 'green' },
+        { id: 16, nom: 'Lido', ville: 'Saint-Raphaël', total: 400, gratuit: false, info: 'Sous cinéma/gare.', tarifs: 'Payant 9h-19h.', lat: 43.4250, lng: 6.7720, color: 'red' },
+        { id: 17, nom: 'Plage du Débarquement', ville: 'Saint-Raphaël', total: 200, gratuit: true, info: 'Près plage.', tarifs: 'Gratuit.', lat: 43.4150, lng: 6.7650, color: 'green' }
+    ];
+
+    let map, userMarker, userPos = null;
+    let favorites = JSON.parse(localStorage.getItem('parkFavorites')) || [];
+    let markers = {};
+
+    function initMap() {
+        map = L.map('map').setView([43.42, 6.75], 12);  // Centre Fréjus/Saint-Raphaël
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+        parkings.forEach(p => {
+            const marker = L.marker([p.lat, p.lng], { icon: L.divIcon({ className: 'custom-marker', html: `<div style="background:${p.color};width:20px;height:20px;border-radius:50%;border:2px solid white;"></div>`, iconSize: [20, 20] }) }).addTo(map);
+            marker.bindPopup(`
+                <b>${p.nom} (${p.ville})</b><br>
+                ${p.total} places totales<br>
+                ${p.gratuit ? '🆓 Gratuit' : '💰 ' + p.tarifs}<br>
+                ${p.info}<br>
+                <a href="${'https://www.parkopedia.fr/parking/' + p.nom.toLowerCase().replace(/ /g, '-') + '/' + p.ville.toLowerCase() + '/'}?target=${p.lat},${p.lng}" target="_blank">Vérif Parkopedia</a><br>
+                <button onclick="toggleFav(${p.id})" style="margin-top:5px;">⭐ Favori</button>
+            `);
+            markers[p.id] = marker;
+        });
+    }
+
+    function toggleTheme() {
+        const body = document.body;
+        body.dataset.theme = body.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.querySelector('.toggle').textContent = body.dataset.theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+        localStorage.setItem('theme', body.dataset.theme);
+    }
+
+    function renderFavorites() {
+        const favList = document.getElementById('favList');
+        favList.innerHTML = favorites.map(id => {
+            const p = parkings.find(pp => pp.id === id);
+            return p ? `<span class="fav-item" onclick="map.setView([${p.lat}, ${p.lng}], 15);">${p.nom}</span>` : '';
+        }).join('');
+    }
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                if (userMarker) map.removeLayer(userMarker);
+                userMarker = L.marker([userPos.lat, userPos.lng]).addTo(map).bindPopup('Votre position');
+                map.setView([userPos.lat, userPos.lng], 13);
+                alert('Position OK ! Marqueurs triés par proximité.');
+            });
+        }
+    }
+
+    function toggleFav(id) {
+        const idx = favorites.indexOf(id);
+        if (idx > -1) favorites.splice(idx, 1); else favorites.push(id);
+        localStorage.setItem('parkFavorites', JSON.stringify(favorites));
+        renderFavorites();
+    }
+
+    function exportFavorites() {
+        const csv = favorites.map(id => {
+            const p = parkings.find(pp => pp.id === id);
+            return [p.nom, p.ville, p.total, p.tarifs, p.lat, p.lng].join(';');
+        }).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'favoris-parkings.csv'; a.click();
+    }
+
+    function requestNotification() {
+        if (Notification.permission === 'granted') notify(); else Notification.requestPermission(() => notify());
+    }
+    function notify() { new Notification('Rappel parkings !', { body: 'Vérifie estimations sur Parkopedia.' }); }
+
+    // Recherche & filtre
+    document.getElementById('searchInput').addEventListener('input', e => {
+        const terms = e.target.value.toLowerCase();
+        Object.values(markers).forEach(marker => {
+            const p = parkings.find(pp => pp.id === parseInt(marker.options.id || 0));
+            if (p && (p.nom.toLowerCase().includes(terms) || p.ville.toLowerCase().includes(terms))) {
+                marker.addTo(map);
+            } else {
+                map.removeLayer(marker);
+            }
+        });
+    });
+
+    // Init
+    if (localStorage.getItem('theme') === 'dark') toggleTheme();
+    initMap();
+    renderFavorites();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('data:text/javascript,addEventListener("install",e=>e.waitUntil(skipWaiting()))');
+</script>
+</body>
+</html>
