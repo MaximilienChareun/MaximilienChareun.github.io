@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITENAME | Création de Dossier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #6366f1;
+            --accent-soft: rgba(99, 102, 241, 0.1);
+            --neon-green: #39ff14;
+            --dark: #0f172a;
+            --gray-bg: #f8fafc;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; color: var(--dark);
+        }
+
+        .main-card {
+            display: flex; width: 95vw; max-width: 1350px; height: 88vh;
+            background: white; border-radius: 40px; box-shadow: 0 50px 100px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        /* --- SECTION GAUCHE (FORMULAIRE) --- */
+        .form-section {
+            flex: 1.2; padding: 45px 60px; display: flex; flex-direction: column;
+            background: white; position: relative;
+        }
+
+        h2 { font-weight: 700; margin: 0 0 30px 0; font-size: 1.8rem; letter-spacing: -1px; }
+
+        .row { display: flex; gap: 20px; margin-bottom: 18px; }
+        .field { flex: 1; display: flex; flex-direction: column; }
+        
+        label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; color: #94a3b8; letter-spacing: 0.5px; }
+        
+        input, select {
+            padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border);
+            background: var(--gray-bg); font-size: 0.95rem; font-family: inherit; transition: 0.2s;
+        }
+
+        input:focus, select:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 4px var(--accent-soft); }
+
+        /* Bouton Optionnel Stylisé */
+        .opt-trigger-container { margin: 5px 0 20px 0; }
+        .btn-opt-trigger {
+            background: var(--accent-soft); border: 1px dashed rgba(99, 102, 241, 0.4);
+            color: var(--accent); font-weight: 600; font-size: 0.8rem; cursor: pointer;
+            padding: 10px 16px; border-radius: 12px; display: flex; align-items: center; gap: 10px;
+            transition: 0.3s; font-family: inherit;
+        }
+        .btn-opt-trigger:hover { background: rgba(99, 102, 241, 0.15); transform: translateY(-1px); }
+        .btn-opt-trigger .icon-box {
+            width: 20px; height: 20px; background: var(--accent); color: white;
+            border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: 0.4s;
+        }
+        .btn-opt-trigger.active .icon-box { transform: rotate(135deg); background: #64748b; }
+
+        .optional-zone { 
+            display: none; opacity: 0; transform: translateY(-10px); 
+            transition: 0.3s ease; border-left: 2px solid var(--accent); padding-left: 20px; margin-bottom: 20px;
+        }
+        .optional-zone.show { display: flex; opacity: 1; transform: translateY(0); }
+
+        /* Accès Systèmes */
+        .access-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .toggle-card {
+            background: var(--gray-bg); padding: 12px; border-radius: 14px;
+            display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 500;
+        }
+
+        /* Email Terminal */
+        .email-terminal {
+            background: #000; border-radius: 20px; padding: 18px 25px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: auto; border: 1px solid #333;
+        }
+        .email-val { color: var(--neon-green); font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; text-shadow: 0 0 10px rgba(57, 255, 20, 0.3); }
+        .copy-btn {
+            background: #1a1a1a; color: #888; border: 1px solid #333; padding: 8px 15px;
+            border-radius: 10px; cursor: pointer; font-size: 0.7rem; font-weight: 600; transition: 0.2s;
+        }
+        .copy-btn:hover { background: #333; color: white; border-color: #555; }
+
+        /* --- SECTION DROITE (IMAGE) --- */
+        .image-section { flex: 1; position: relative; background: #f1f5f9; overflow: hidden; }
+        #avatar-view { width: 100%; height: 100%; object-fit: cover; transition: 0.4s ease; }
+        
+        .download-btn {
+            position: absolute; bottom: 40px; right: 40px;
+            background: var(--dark); color: white; border: none; padding: 20px 40px;
+            border-radius: 24px; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); transition: 0.3s;
+            display: flex; align-items: center; gap: 12px; z-index: 10;
+        }
+        .download-btn:hover { transform: scale(1.05) translateY(-5px); background: var(--accent); }
+
+        /* Switch UI */
+        .switch { position: relative; width: 36px; height: 18px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #cbd5e1; border-radius: 20px; transition: .3s; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background: white; border-radius: 50%; transition: .3s; }
+        input:checked + .slider { background: var(--accent); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+                /* --- BOUTON RETOUR --- */
+        .btn-back {
+            position: fixed; top: 30px; left: 30px;
+            background: white; padding: 12px 20px; border-radius: 15px;
+            text-decoration: none; color: var(--dark); font-weight: 700; font-size: 0.8rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s;
+            z-index: 10;
+        }
+        .btn-back:hover { transform: translateX(-5px); background: #f8fafc; }
+
+    </style>
+</head>
+<body>
+
+<div class="main-card">
+    <div class="form-section">
+        <h2>New Employé</h2>
+
+        <div class="row">
+            <div class="field"><label>Nom de famille</label><input type="text" id="nom" placeholder="ex: MORIN" oninput="refresh()"></div>
+            <div class="field"><label>Prénom</label><input type="text" id="prenom" placeholder="ex: Luc" oninput="refresh()"></div>
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label>Établissement / Service</label>
+                <select id="service" onchange="refresh()">
+                    <option value="service">-- Sélectionner --</option>
+                    <option value="Meysante">Meysante</option>
+                    <option value="UniteDiet">UniteDiet</option>
+                    <option value="Grangea">Grangea</option>
+                    <option value="Nice">Nice</option>
+                </select>
+            </div>
+            <a href="index.html" class="btn-back">← RETOUR</a>
+            <div class="field">
+                <label>Genre & Titre</label>
+                <div style="display:flex; gap:8px;">
+                    <select id="genre" onchange="refresh()" style="flex:0.8;"><option value="">Genre</option><option value="H">H</option><option value="F">F</option></select>
+                    <select id="fonction" onchange="refresh()" style="flex:1.2;"><option value="">Fonction</option><option value="employe">Employé</option><option value="medecin">Médecin</option></select>
+                </div>
+            </div>
+            <div class="field"><label>Prise de poste</label><input type="date" id="dateDebut"></div>
+        </div>
+
+        <div class="opt-trigger-container">
+            <button class="btn-opt-trigger" onclick="toggleOptions()" id="optBtn">
+                <span class="icon-box">+</span>
+                <span id="btnLabel">Ajouter Téléphone & Date de fin</span>
+            </button>
+        </div>
+
+        <div class="row optional-zone" id="optZone">
+            <div class="field"><label>Contact Téléphonique</label><input type="tel" id="tel" placeholder="06 .. .. .. .."></div>
+            <div class="field"><label>Date de fin (Contrat)</label><input type="date" id="dateFin"></div>
+        </div>
+
+        <label style="display:block; margin-bottom: 12px; font-size: 0.65rem; font-weight: 800; color: #94a3b8;">ACCÈS RÉSEAUX & LOGICIELS</label>
+        <div class="access-grid">
+            <div class="toggle-card"><span>Compte Windows</span><label class="switch"><input type="checkbox" class="access-check" data-id="Compte Windows"><span class="slider"></span></label></div>
+            <div class="toggle-card"><span>Logiciel Osiris</span><label class="switch"><input type="checkbox" class="access-check" data-id="Osiris"><span class="slider"></span></label></div>
+            <div class="toggle-card"><span>Messagerie Pro</span><label class="switch"><input type="checkbox" class="access-check" data-id="Messagerie"><span class="slider"></span></label></div>
+            <div class="toggle-card"><span>Accès Parking</span><label class="switch"><input type="checkbox" class="access-check" data-id="Parking"><span class="slider"></span></label></div>
+            <div class="toggle-card"><span>Badge RH</span><label class="switch"><input type="checkbox" class="access-check" data-id="Badge RH"><span class="slider"></span></label></div>
+            <div class="toggle-card"><span>VPN Distant</span><label class="switch"><input type="checkbox" class="access-check" data-id="VPN"><span class="slider"></span></label></div>
+        </div>
+
+        <div class="email-terminal">
+            <div class="email-val" id="emailOut">p.nom@service.fr</div>
+            <button class="copy-btn" onclick="copyEmail()">COPIER</button>
+        </div>
+    </div>
+
+    <div class="image-section">
+        <img id="avatar-view" src="vide.png" alt="Previsualisation">
+        <button class="download-btn" onclick="downloadJSON()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            TÉLÉCHARGER JSON
+        </button>
+    </div>
+</div>
+
+<script>
+    function toggleOptions() {
+        const zone = document.getElementById('optZone');
+        const btn = document.getElementById('optBtn');
+        const label = document.getElementById('btnLabel');
+        zone.classList.toggle('show');
+        btn.classList.toggle('active');
+        label.textContent = zone.classList.contains('show') ? "Masquer les options supplémentaires" : "Ajouter Téléphone & Date de fin";
+    }
+
+    function refresh() {
+        const genre = document.getElementById('genre').value;
+        const fonction = document.getElementById('fonction').value;
+        const img = document.getElementById('avatar-view');
+        img.src = (genre && fonction) ? fonction + genre + ".png" : "vide.png";
+
+        const nom = document.getElementById('nom').value.trim().toLowerCase().replace(/\s+/g, '');
+        const prenom = document.getElementById('prenom').value.trim().toLowerCase();
+        const service = document.getElementById('service').value.toLowerCase();
+        const out = document.getElementById('emailOut');
+
+        if(nom && prenom) {
+            out.textContent = `${prenom.charAt(0)}.${nom}@${service}.fr`;
+            out.style.color = "var(--neon-green)";
+        } else {
+            out.textContent = "en attente...";
+            out.style.color = "#444";
+        }
+    }
+
+    function copyEmail() {
+        const text = document.getElementById('emailOut').textContent;
+        if(text.includes('@')) {
+            navigator.clipboard.writeText(text);
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = "COPIÉ !";
+            setTimeout(() => btn.textContent = "COPIER", 1500);
+        }
+    }
+
+    function downloadJSON() {
+        const accesObj = {};
+        document.querySelectorAll('.access-check').forEach(cb => {
+            accesObj[cb.getAttribute('data-id')] = cb.checked ? "Oui" : "Non";
+        });
+
+        const data = {
+            identite: {
+                nom: document.getElementById('nom').value,
+                prenom: document.getElementById('prenom').value,
+                genre: document.getElementById('genre').value,
+                fonction: document.getElementById('fonction').value,
+                telephone: document.getElementById('tel').value || "N/A"
+            },
+            structure: {
+                service: document.getElementById('service').value,
+                email_genere: document.getElementById('emailOut').textContent
+            },
+            contrat: {
+                date_debut: document.getElementById('dateDebut').value,
+                date_fin: document.getElementById('dateFin').value || "Non spécifiée"
+            },
+            acces_systemes: accesObj
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `fiche_${data.identite.nom || 'collaborateur'}.json`;
+        a.click();
+    }
+</script>
+
+</body>
+</html>

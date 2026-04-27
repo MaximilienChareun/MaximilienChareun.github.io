@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Signature | RH System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #6366f1; --dark: #0f172a; --gray: #64748b; }
+        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%); font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        .btn-back { position: fixed; top: 30px; left: 30px; background: white; padding: 12px 20px; border-radius: 15px; text-decoration: none; color: var(--dark); font-weight: 700; font-size: 0.8rem; box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s; }
+        .btn-back:hover { transform: translateX(-5px); }
+
+        .main-card { width: 90vw; max-width: 800px; background: white; border-radius: 40px; padding: 40px; box-shadow: 0 40px 80px rgba(0,0,0,0.15); }
+        .actions-row { display: flex; gap: 20px; margin-bottom: 30px; }
+        .action-box { flex: 1; border: 2px dashed #e2e8f0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; cursor: pointer; transition: 0.3s; background: #f8fafc; text-align: center; }
+        .action-box:hover { border-color: var(--accent); background: #f1f5f9; }
+
+        /* --- PREVIEW SIGNATURE --- */
+        .preview-area { background: #f1f5f9; padding: 40px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; }
+        
+        .signature-render { 
+            background: white; padding: 25px; border-radius: 4px; 
+            border-left: 4px solid var(--accent); min-width: 380px;
+            line-height: 1.2; /* Espacement serré */
+        }
+
+        /* Hiérarchie visuelle demandée */
+        .sig-info h3 { margin: 0 0 8px 0; font-size: 1.6rem; font-weight: 800; color: var(--dark); }
+        .sig-info p { margin: 2px 0; font-size: 0.9rem; color: var(--gray); font-weight: 400; }
+        .sig-info strong { color: var(--dark); font-weight: 700; }
+        
+        /* Image en beaucoup plus gros */
+        .sig-logo-large { width: 180px; margin-top: 20px; display: block; filter: grayscale(0.2); transition: 0.3s; }
+        .sig-logo-large:hover { filter: grayscale(0); }
+
+        .copy-btn { margin-top: 25px; background: var(--dark); color: white; border: none; padding: 15px 30px; border-radius: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: 0.3s; }
+        .copy-btn:hover { background: var(--accent); transform: translateY(-2px); }
+
+        /* --- MODAL --- */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal { width: 480px; max-height: 85vh; background: white; border-radius: 32px; padding: 30px; overflow-y: auto; }
+        .field-group { margin-bottom: 12px; }
+        .field-group label { display: block; font-size: 0.6rem; font-weight: 800; color: var(--gray); text-transform: uppercase; margin-bottom: 4px; }
+        .field-group input, select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; font-family: inherit; font-size: 0.9rem; }
+        .dynamic-field { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 10px; }
+        .btn-add { background: #f1f5f9; color: var(--accent); border: none; padding: 12px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: 700; margin: 10px 0 20px 0; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="btn-back">← RETOUR</a>
+
+    <div class="main-card">
+        <h1 style="text-align:center; font-size: 1.4rem; margin-top:0; margin-bottom: 30px;">Signature Professionnelle</h1>
+
+        <div class="actions-row">
+            <div class="action-box" onclick="document.getElementById('fileInput').click()">
+                <span style="font-weight: 800; color: var(--accent);">IMPORTER JSON</span>
+                <p style="font-size: 0.7rem; margin: 5px 0 0 0;">Remplissage automatique</p>
+                <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="importAndEdit(this)">
+            </div>
+            <div class="action-box" onclick="openModal()">
+                <span style="font-weight: 800;">ÉDITION MANUELLE</span>
+                <p style="font-size: 0.7rem; margin: 5px 0 0 0;">Personnalisation totale</p>
+            </div>
+        </div>
+
+        <div class="preview-area">
+            <div class="signature-render" id="sigContainer">
+                <div class="sig-info" id="sigFields">
+                    <h3 id="sigName">Prénom NOM</h3>
+                    <p id="sigTitle">Fonction / Service</p>
+                    <p id="sigTel">Tél : 01 02 03 04 05</p>
+                </div>
+                <img id="displayLogo" src="mey.jpg" class="sig-logo-large" onerror="this.src='https://via.placeholder.com/180x60?text=LOGO+MEYSANTE'">
+            </div>
+            
+            <button class="copy-btn" onclick="copyToHTML()">COPIER LE CODE HTML</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+        <div class="modal">
+            <h2 style="margin-top:0; font-size: 1.2rem;">Configurer la signature</h2>
+            <div class="field-group"><label>Prénom</label><input type="text" id="in_prenom"></div>
+            <div class="field-group"><label>Nom</label><input type="text" id="in_nom"></div>
+            <div class="field-group"><label>Fonction / Service</label><input type="text" id="in_fonction"></div>
+            <div class="field-group"><label>Téléphone</label><input type="text" id="in_tel"></div>
+            
+            <div class="field-group">
+                <label>Logo d'entreprise</label>
+                <select id="logoSelect" onchange="checkCustomLogo(this)">
+                    <option value="mey.jpg">Meysante (Classique)</option>
+                    <option value="unite.jpg">UniteDiet</option>
+                    <option value="hopital.png">Hôpital Privé</option>
+                    <option value="custom">-- Télécharger mon logo --</option>
+                </select>
+                <input type="file" id="customFile" style="display:none; margin-top:10px;">
+            </div>
+
+            <label style="font-size: 0.6rem; font-weight: 800; color: var(--gray); text-transform: uppercase;">Champs supplémentaires</label>
+            <div id="extraFieldsContainer"></div>
+            <button class="btn-add" onclick="addExtraField()">+ AJOUTER UNE LIGNE</button>
+
+            <button class="copy-btn" style="width:100%; margin-top: 10px;" onclick="applyChanges()">GÉNÉRER</button>
+            <p style="text-align:center; font-size: 0.8rem; cursor:pointer; color:var(--gray); margin-top:15px;" onclick="closeModal()">ANNULER</p>
+        </div>
+    </div>
+
+    <script>
+        const overlay = document.getElementById('overlay');
+        let currentLogo = "mey.jpg";
+
+        function openModal() { overlay.style.display = 'flex'; }
+        function closeModal() { overlay.style.display = 'none'; }
+
+        function checkCustomLogo(s) {
+            const f = document.getElementById('customFile');
+            if(s.value === 'custom') {
+                f.style.display = 'block';
+                f.onchange = (e) => {
+                    const r = new FileReader();
+                    r.onload = (ev) => currentLogo = ev.target.result;
+                    r.readAsDataURL(e.target.files[0]);
+                };
+            } else { f.style.display='none'; currentLogo = s.value; }
+        }
+
+        function importAndEdit(input) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const d = JSON.parse(e.target.result);
+                document.getElementById('in_prenom').value = d.identite?.prenom || "";
+                document.getElementById('in_nom').value = d.identite?.nom || "";
+                document.getElementById('in_fonction').value = d.identite?.fonction || d.structure?.service || "";
+                document.getElementById('in_tel').value = d.identite?.telephone || "";
+                openModal();
+            };
+            reader.readAsText(input.files[0]);
+        }
+
+        function addExtraField() {
+            const d = document.createElement('div');
+            d.className = 'dynamic-field';
+            d.innerHTML = `<input type="text" placeholder="Titre" class="ex-label"><input type="text" placeholder="Valeur" class="ex-val"><button style="border:none; background:none; cursor:pointer;" onclick="this.parentElement.remove()">✕</button>`;
+            document.getElementById('extraFieldsContainer').appendChild(d);
+        }
+
+        function applyChanges() {
+            const p = document.getElementById('in_prenom').value;
+            const n = document.getElementById('in_nom').value;
+            const f = document.getElementById('in_fonction').value;
+            const t = document.getElementById('in_tel').value;
+
+            let html = `<h3 style="margin:0 0 8px 0; font-size:1.6rem; font-weight:800;">${p} ${n.toUpperCase()}</h3>`;
+            html += `<p style="margin:2px 0; font-size:0.9rem;">${f}</p>`;
+            if(t && t !== "N/A") html += `<p style="margin:2px 0; font-size:0.9rem;"><strong>Tél :</strong> ${t}</p>`;
+
+            const labels = document.querySelectorAll('.ex-label');
+            const vals = document.querySelectorAll('.ex-val');
+            labels.forEach((l, i) => {
+                if(l.value) html += `<p style="margin:2px 0; font-size:0.9rem;"><strong>${l.value} :</strong> ${vals[i].value}</p>`;
+            });
+
+            document.getElementById('sigFields').innerHTML = html;
+            document.getElementById('displayLogo').src = currentLogo;
+            closeModal();
+        }
+
+        function copyToHTML() {
+            const content = document.getElementById('sigContainer').innerHTML;
+            const styledHTML = `<div style="font-family: Arial, sans-serif; border-left: 4px solid #6366f1; padding-left: 20px; line-height: 1.2;">${content}</div>`;
+            navigator.clipboard.writeText(styledHTML).then(() => alert("Code HTML copié !"));
+        }
+    </script>
+</body>
+</html>

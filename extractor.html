@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Editor & Parser | Meysante</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        :root {
+            --accent: #6366f1; --dark: #0f172a; --success: #22c55e;
+            --gray: #64748b; --bg-soft: #f8fafc;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; height: 100vh; background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif; display: flex; align-items: center; justify-content: center;
+            padding: 20px; overflow: hidden;
+        }
+
+        .btn-back {
+            position: fixed; top: 30px; left: 30px; background: white; padding: 12px 20px; 
+            border-radius: 15px; text-decoration: none; color: var(--dark); font-weight: 700; 
+            font-size: 0.8rem; box-shadow: 0 10px 20px rgba(0,0,0,0.1); z-index: 1000;
+        }
+
+        .parser-container {
+            width: 95vw; max-width: 1200px; height: 90vh; background: white; border-radius: 40px;
+            padding: 30px; box-shadow: 0 40px 80px rgba(0,0,0,0.2);
+            display: flex; gap: 30px; position: relative;
+        }
+
+        .step { display: none; width: 100%; height: 100%; flex-direction: column; animation: fadeIn 0.3s ease; }
+        .step.active { display: flex; }
+
+        /* --- LAYOUT DOUBLE COLONNE --- */
+        .editor-layout { display: flex; gap: 30px; height: 100%; overflow: hidden; }
+        .pdf-preview { flex: 1; background: #525659; border-radius: 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .pdf-preview canvas { box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 20px; max-width: 100%; }
+        .controls-panel { flex: 1; display: flex; flex-direction: column; }
+
+        /* --- CARDS EDITION --- */
+        .scroll-area { flex: 1; overflow-y: auto; padding-right: 15px; }
+        .editable-card { 
+            background: var(--bg-soft); border: 2px solid #f1f5f9; border-radius: 20px; padding: 15px; margin-bottom: 12px;
+        }
+        .card-header-edit { 
+            border: none; background: transparent; font-size: 0.65rem; font-weight: 800; 
+            color: var(--accent); text-transform: uppercase; width: 100%; outline: none; margin-bottom: 5px;
+        }
+        .card-value-edit { 
+            width: 100%; border: none; font-size: 1.1rem; font-weight: 600; color: var(--dark); 
+            outline: none; background: white; padding: 8px 12px; border-radius: 10px;
+        }
+
+        /* --- SIGNATURE --- */
+        .signature-pad { background: white; border: 2px dashed #cbd5e1; border-radius: 20px; height: 150px; cursor: crosshair; touch-action: none; width: 100%; }
+
+        .drop-zone { border: 3px dashed #cbd5e1; border-radius: 35px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        .drop-zone.success { border-color: var(--success); background: #f0fdf4; color: var(--success); }
+
+        .btn-next { padding: 18px; border-radius: 20px; background: var(--dark); color: white; border: none; font-weight: 800; cursor: pointer; width: 100%; }
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-sec { background: #f1f5f9; color: var(--dark); font-size: 0.8rem; }
+
+@media print {
+        @page { size: A4; margin: 20mm; }
+        
+        body { background: white !important; padding: 0; }
+        
+        /* Masquer les éléments inutiles */
+        .btn-back, .btn-next, .btn-group, .pdf-preview, .btn-manual, 
+        .lang-badge, .btn-clear-sig, h1, .subtitle { display: none !important; }
+
+        .parser-container { 
+            box-shadow: none; border: none; width: 100%; height: auto; 
+            display: block; padding: 0; 
+        }
+
+        /* En-tête de la fiche */
+        #finalResults::before {
+            content: "EXTRACTION PDF";
+            display: block; font-size: 18pt; font-weight: 800;
+            color: #0f172a; border-bottom: 3px solid #6366f1;
+            margin-bottom: 30px; padding-bottom: 10px;
+            text-align: left;
+        }
+
+        /* Grille de données */
+        #finalResults { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+        }
+
+        .editable-card { 
+            border: none !important;
+            border-left: 3px solid #e2e8f0 !important;
+            background: white !important;
+            margin-bottom: 10px;
+            padding: 5px 15px !important;
+            page-break-inside: avoid;
+        }
+
+        /* Styling des textes imprimés */
+        .card-header-edit { 
+            color: #6366f1 !important; 
+            font-size: 8pt !important; 
+            font-weight: 700 !important;
+            margin-bottom: 2px !important;
+        }
+
+        .card-value-edit { 
+            font-size: 11pt !important; 
+            font-weight: 600 !important;
+            color: black !important;
+            padding: 0 !important;
+        }
+
+        /* Gestion de la signature */
+        #sigCard {
+            grid-column: span 2;
+            margin-top: 40px;
+            border: none !important;
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .signature-pad {
+            border: 1px solid #eee !important;
+            width: 250px !important;
+            height: 100px !important;
+        }
+
+        /* Image / Photos */
+        .img-grid {
+            grid-column: span 2;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+    }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="btn-back">← RETOUR</a>
+
+    <div class="parser-container">
+        
+        <div id="step1" class="step active">
+            <h1 style="text-align:center">Analyseur de Document</h1>
+            <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileIn').click()">
+                <span id="dropIcon" style="font-size:3.5rem">📄</span>
+                <p id="dropText" style="font-weight:700">Déposez votre PDF pour commencer</p>
+                <input type="file" id="fileIn" style="display:none" accept="application/pdf" onchange="handleFileSelect(event)">
+            </div>
+            <button id="btnNextStep1" class="btn-next" onclick="goToStep(2)" style="margin-top:20px" disabled>CONTINUER</button>
+        </div>
+
+        <div id="step2" class="step">
+            <div class="editor-layout">
+                <div class="pdf-preview" id="pdfPreview">
+                    <p style="color:white; font-size:0.8rem; margin-bottom:10px;">Aperçu du document source</p>
+                </div>
+
+                <div class="controls-panel">
+                    <div id="langIndicator"></div>
+                    <div class="scroll-area" id="finalResults"></div>
+                    
+                    <div class="editable-card" id="sigCard" style="margin-top:10px">
+                        <label class="card-header-edit">Signature Digitale</label>
+                        <canvas id="sig-canvas" class="signature-pad"></canvas>
+                        <button class="btn-clear-sig" onclick="clearSig()" style="background:none; border:none; color:var(--gray); font-size:0.7rem; cursor:pointer; padding:5px;">Effacer la signature</button>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn-next btn-sec" id="anonBtn" onclick="toggleAnon()">🤫 ANONYME : OFF</button>
+                        <button class="btn-next" style="background:var(--success)" onclick="window.print()">🖨️ IMPRIMER / PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        let extractedText = "";
+        let isAnonymized = false;
+        let originalValues = [];
+
+        function goToStep(num) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step' + num).classList.add('active');
+            if(num === 2) initSignature();
+        }
+
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+            const pdf = await loadingTask.promise;
+            
+            let fullText = "";
+            const previewContainer = document.getElementById('pdfPreview');
+            previewContainer.innerHTML = "";
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                
+                // Rendu visuel
+                const viewport = page.getViewport({scale: 0.8});
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                await page.render({canvasContext: context, viewport: viewport}).promise;
+                previewContainer.appendChild(canvas);
+
+                // Extraction texte
+                const content = await page.getTextContent();
+                fullText += content.items.map(item => item.str).join(" ") + " ";
+            }
+            
+            extractedText = fullText;
+            document.getElementById('dropZone').classList.add('success');
+            document.getElementById('btnNextStep1').disabled = false;
+            runExtraction();
+        }
+
+        function runExtraction() {
+            const container = document.getElementById('finalResults');
+            container.innerHTML = "";
+
+            const detectors = [
+                { label: 'Identité', regex: /\b[A-Z][a-zÀ-ÿ]+(?:\s[A-Z][a-zÀ-ÿ]+)+\b/g },
+                { label: 'Email', regex: /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi },
+                { label: 'Téléphone', regex: /(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}/g }
+            ];
+
+            detectors.forEach(s => {
+                let matches = [...new Set(extractedText.match(s.regex) || [])];
+                matches.forEach(m => {
+                    container.innerHTML += `
+                        <div class="editable-card">
+                            <input class="card-header-edit" value="${s.label}">
+                            <input class="card-value-edit" value="${m}">
+                        </div>`;
+                });
+            });
+
+            container.innerHTML += `<button class="btn-manual" onclick="addManual()" style="width:100%; border:2px dashed #cbd5e1; padding:12px; border-radius:15px; background:none; font-weight:700; cursor:pointer; color:var(--gray)">+ AJOUTER UN CHAMP</button>`;
+        }
+
+        function addManual() {
+            const div = document.createElement('div');
+            div.className = "editable-card";
+            div.innerHTML = `<input class="card-header-edit" value="NOUVEAU CHAMP"><input class="card-value-edit" placeholder="...">`;
+            document.getElementById('finalResults').insertBefore(div, document.querySelector('.btn-manual'));
+        }
+
+        function toggleAnon() {
+            isAnonymized = !isAnonymized;
+            const inputs = document.querySelectorAll('.card-value-edit');
+            inputs.forEach((input, index) => {
+                if (isAnonymized) {
+                    originalValues[index] = input.value;
+                    input.value = "••••••••••••";
+                } else {
+                    input.value = originalValues[index] || input.value;
+                }
+            });
+            document.getElementById('anonBtn').textContent = isAnonymized ? "👁️ ANONYME : ON" : "🤫 ANONYME : OFF";
+        }
+
+        // LOGIQUE SIGNATURE
+        let sigCanvas, sigCtx, drawing = false;
+        function initSignature() {
+            sigCanvas = document.getElementById('sig-canvas');
+            sigCtx = sigCanvas.getContext('2d');
+            sigCanvas.width = sigCanvas.offsetWidth;
+            sigCanvas.height = sigCanvas.offsetHeight;
+            sigCtx.lineWidth = 2;
+            sigCtx.lineCap = 'round';
+            sigCtx.strokeStyle = '#0f172a';
+
+            const getPos = (e) => {
+                const rect = sigCanvas.getBoundingClientRect();
+                return { x: (e.clientX || e.touches[0].clientX) - rect.left, y: (e.clientY || e.touches[0].clientY) - rect.top };
+            };
+
+            const start = (e) => { drawing = true; const pos = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(pos.x, pos.y); };
+            const move = (e) => { if(!drawing) return; const pos = getPos(e); sigCtx.lineTo(pos.x, pos.y); sigCtx.stroke(); };
+            const stop = () => drawing = false;
+
+            sigCanvas.addEventListener('mousedown', start); sigCanvas.addEventListener('mousemove', move); window.addEventListener('mouseup', stop);
+            sigCanvas.addEventListener('touchstart', start); sigCanvas.addEventListener('touchmove', move); window.addEventListener('touchend', stop);
+        }
+
+        function clearSig() { sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); }
+    </script>
+</body>
+</html>

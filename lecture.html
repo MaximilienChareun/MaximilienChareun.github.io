@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture Dossier | RH System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #6366f1;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --border: #f1f5f9;
+        }
+
+        body {
+            margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden;
+        }
+
+        /* --- BOUTON RETOUR --- */
+        .btn-back {
+            position: fixed; top: 30px; left: 30px;
+            background: white; padding: 12px 20px; border-radius: 15px;
+            text-decoration: none; color: var(--dark); font-weight: 700; font-size: 0.8rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s;
+            z-index: 10;
+        }
+        .btn-back:hover { transform: translateX(-5px); background: #f8fafc; }
+
+        .import-card {
+            width: 90vw; max-width: 600px; height: 400px;
+            background: white; border-radius: 40px;
+            display: flex; align-items: center; justify-content: center; padding: 30px;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.1);
+        }
+
+        .drop-zone {
+            width: 100%; height: 100%; border: 3px dashed #e2e8f0; border-radius: 30px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; background: #fbfcfd; transition: 0.3s;
+        }
+        .drop-zone:hover { border-color: var(--accent); background: #f5f7ff; }
+
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(15px);
+            display: none; align-items: center; justify-content: center; z-index: 100;
+        }
+
+        .modal {
+            width: 95vw; max-width: 800px; max-height: 85vh; background: white; border-radius: 35px;
+            padding: 40px; position: relative; overflow-y: auto;
+            transform: translateY(30px); transition: 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+        }
+        .modal.show { transform: translateY(0); }
+
+        .modal-header { display: flex; align-items: center; gap: 20px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9; }
+        .user-avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .section-title { font-size: 0.65rem; font-weight: 800; color: var(--accent); text-transform: uppercase; margin: 25px 0 12px 0; display: block; letter-spacing: 1px; }
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+        .info-box { background: #fbfcfd; padding: 14px 18px; border-radius: 14px; border: 1px solid #f1f5f9; }
+        .info-box label { font-size: 0.55rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .info-box span { font-weight: 600; color: var(--dark); font-size: 0.9rem; }
+        .btn-group { margin-top: 35px; display: flex; gap: 15px; }
+        .btn { flex: 1; padding: 16px; border-radius: 16px; border: none; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 0.9rem; }
+        .btn-close { background: #f1f5f9; color: #64748b; }
+        .btn-confirm { background: var(--dark); color: white; }
+
+        @media print {
+            .btn-back, .import-card, .overlay, .btn-group, h2#dossierTitle { display: none !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            @page { size: A4 portrait; margin: 2cm; }
+            body { background: white !important; height: auto !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; }
+            .overlay { display: block !important; position: static !important; background: none !important; backdrop-filter: none !important; }
+            .modal { 
+                width: 100% !important; max-width: 100% !important; height: auto !important; 
+                box-shadow: none !important; transform: none !important; padding: 0 !important; margin: 0 !important;
+                background: white !important; overflow: visible !important;
+            }
+            .section-title { color: black !important; border-left: 5px solid var(--accent); padding-left: 12px; }
+            .data-grid { display: block !important; }
+            .info-box { background: white !important; border: none !important; border-bottom: 1px solid #eee !important; display: flex; justify-content: space-between; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="btn-back">← RETOUR</a>
+
+    <div class="import-card">
+        <div class="drop-zone" id="dropZone">
+            <h2 id="dossierTitle" style="margin-bottom: 5px;">Importer Dossier</h2>
+            <p style="font-size: 0.85rem; color: #64748b;">Déposez le JSON ici</p>
+            <input type="file" id="fileInput" accept=".json" style="display: none;">
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <img src="User.png" class="user-avatar" id="avatarIcon" onerror="this.src='https://via.placeholder.com/70?text=U'">
+                <div>
+                    <h2 id="userName" style="margin:0; font-size: 1.5rem;">Collaborateur</h2>
+                    <p id="userMail" style="margin:3px 0 0 0; font-size: 0.9rem; color:#64748b;"></p>
+                </div>
+            </div>
+            
+            <div id="contentRenderer"></div>
+
+            <div class="btn-group">
+                <button class="btn btn-close" onclick="closeModal()">FERMER</button>
+                <button class="btn btn-confirm" onclick="window.print()">IMPRIMER LA FICHE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const overlay = document.getElementById('overlay');
+        const modal = document.getElementById('modal');
+
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drop-zone-over'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('drop-zone-over');
+        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('drop-zone-over'); handleFile(e.dataTransfer.files[0]); };
+
+        function handleFile(file) {
+            if (!file || file.type !== "application/json") return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    renderSmartData(data);
+                } catch (err) { alert("Fichier JSON invalide."); }
+            };
+            reader.readAsText(file);
+        }
+
+        function renderSmartData(data) {
+            const container = document.getElementById('contentRenderer');
+            container.innerHTML = '';
+
+            document.getElementById('userName').textContent = `${data.identite?.prenom || ''} ${data.identite?.nom || 'Inconnu'}`;
+            document.getElementById('userMail').textContent = data.structure?.email_genere || '';
+
+            const sections = [
+                { title: "Identité", obj: data.identite },
+                { title: "Structure & Poste", obj: data.structure },
+                { title: "Dates de Contrat", obj: data.contrat },
+                { title: "Habilitations Accordées", obj: data.acces_systemes, isAccess: true }
+            ];
+
+            sections.forEach(sec => {
+                if (!sec.obj) return;
+                const filteredKeys = Object.entries(sec.obj).filter(([key, val]) => {
+                    if (!val || val === "N/A" || val === "" || val === "Non spécifiée") return false;
+                    if (sec.isAccess && val === "Non") return false;
+                    return true;
+                });
+
+                if (filteredKeys.length > 0) {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = `<span class="section-title">${sec.title}</span>`;
+                    const grid = document.createElement('div');
+                    grid.className = 'data-grid';
+
+                    filteredKeys.forEach(([key, val]) => {
+                        const box = document.createElement('div');
+                        box.className = 'info-box';
+                        box.innerHTML = `<label>${key.replace(/_/g, ' ')}</label><span>${val}</span>`;
+                        grid.appendChild(box);
+                    });
+                    wrapper.appendChild(grid);
+                    container.appendChild(wrapper);
+                }
+            });
+
+            overlay.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
+        }
+    </script>
+</body>
+</html>

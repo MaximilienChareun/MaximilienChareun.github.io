@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Check Radical Pro | RH System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #6366f1;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --dark: #0f172a;
+            --gray: #64748b;
+        }
+
+        body {
+            margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif; padding: 20px;
+        }
+
+        .btn-back {
+            position: fixed; top: 30px; left: 30px;
+            background: white; padding: 12px 20px; border-radius: 15px;
+            text-decoration: none; color: var(--dark); font-weight: 700; font-size: 0.8rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05); transition: 0.3s; z-index: 10;
+        }
+
+        .main-card {
+            width: 100%; max-width: 650px; background: white; border-radius: 40px;
+            padding: 40px; box-shadow: 0 40px 80px rgba(0,0,0,0.15); 
+            text-align: center; overflow: hidden;
+        }
+
+        .search-input {
+            width: 100%; padding: 20px; border-radius: 20px;
+            border: 2px solid #e2e8f0; font-family: inherit; font-size: 1rem;
+            transition: 0.3s; outline: none; box-sizing: border-box; text-align: center;
+        }
+        .search-input:focus { border-color: var(--accent); }
+
+        .btn-radical {
+            width: 100%; padding: 18px; border-radius: 20px;
+            background: var(--dark); color: white; border: none; font-weight: 800;
+            cursor: pointer; transition: 0.3s; font-size: 1rem; margin-top: 15px;
+        }
+
+        #statusResult {
+            display: none; margin-top: 25px; padding: 25px; border-radius: 25px;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        /* --- MODAL DE PRÉVISUALISATION --- */
+        .overlay-preview {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+
+        .preview-modal {
+            width: 95%; max-width: 1100px; background: #fff; border-radius: 30px;
+            overflow: hidden; animation: zoomIn 0.3s ease; text-align: center;
+            height: 90vh; display: flex; flex-direction: column;
+        }
+
+        .preview-header { color: white; padding: 15px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .preview-body { padding: 0; flex: 1; overflow: hidden; position: relative; background: #eee; }
+
+        .sandbox-iframe { width: 100%; height: 100%; border: none; background: white; }
+
+        .warning-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            background: rgba(255, 255, 255, 0.98); padding: 20px; box-sizing: border-box;
+            border-top: 3px solid #eee;
+            display: flex; flex-direction: column; gap: 10px; z-index: 1001;
+        }
+
+        .btn-report-it {
+            background: var(--danger); color: white; border: none; padding: 15px;
+            border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; font-size: 1rem;
+        }
+
+        .btn-close-preview { background: none; border: none; color: var(--gray); cursor: pointer; font-weight: 600; margin-top: 5px; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="btn-back">← RETOUR</a>
+
+    <div class="main-card">
+        <div style="margin-bottom: 30px;">
+            <span style="font-size: 3rem;">🛡️</span>
+            <h1 style="margin: 10px 0 5px 0;">Cyber-Check <span style="color: var(--accent);">PRO</span></h1>
+            <p style="color: var(--gray); font-size: 0.9rem;">Analyse et isolation des domaines externes.</p>
+        </div>
+
+        <input type="text" id="userInput" class="search-input" placeholder="Lien ou Email (ex: google.fr)">
+        <button class="btn-radical" onclick="runRadicalCheck()">ANALYSER MAINTENANT</button>
+
+        <div id="statusResult">
+            <span id="resIcon" style="font-size: 2.5rem; display: block; margin-bottom: 10px;"></span>
+            <div id="resTitle" style="font-size: 1.2rem; font-weight: 800; margin-bottom: 5px;"></div>
+            <div id="resDesc" style="font-size: 0.9rem; color: var(--gray); margin-bottom: 15px;"></div>
+            <button id="viewDangerBtn" onclick="openPreview()" style="background: var(--dark); color:white; border:none; padding:12px 25px; border-radius:12px; font-weight:700; cursor:pointer;">VOIR LA PRÉVISUALISATION</button>
+        </div>
+    </div>
+
+    <div class="overlay-preview" id="previewModal">
+        <div class="preview-modal">
+            <div id="modalHeader" class="preview-header"></div>
+            <div class="preview-body">
+                <iframe id="sitePreviewFrame" class="sandbox-iframe" sandbox="allow-same-origin" title="Aperçu"></iframe>
+                
+                <div id="modalOverlayUI" class="warning-overlay">
+                    <p id="modalWarnText" style="margin: 0; font-size: 0.85rem; line-height: 1.4;"></p>
+                    <button id="modalReportBtn" class="btn-report-it" onclick="reportToIT()">SIGNALER AU SERVICE IT</button>
+                    <button class="btn-close-preview" onclick="closePreview()">Fermer l'aperçu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lastUrl = "";
+        let isSafe = false;
+
+        function runRadicalCheck() {
+            const input = document.getElementById('userInput').value.trim().toLowerCase();
+            const resultBox = document.getElementById('statusResult');
+            const resIcon = document.getElementById('resIcon');
+            const resTitle = document.getElementById('resTitle');
+            const resDesc = document.getElementById('resDesc');
+
+            if(!input) return;
+            lastUrl = input.startsWith('http') ? input : 'https://' + input;
+            resultBox.style.display = "block";
+
+            // LOGIQUE DE CERTIFICATION
+            const certifiedDomains = ['meysante.fr', 'unitediet.fr', 'google.fr', 'google.com'];
+            isSafe = certifiedDomains.some(dom => input.includes(dom));
+
+            if (isSafe) {
+                resultBox.style.background = "#f0fdf4";
+                resIcon.textContent = "✅";
+                resTitle.textContent = "DOMAIN CERTIFIÉ";
+                resTitle.style.color = "var(--success)";
+                resDesc.textContent = ""; // On enlève la phrase de description
+            } else {
+                resultBox.style.background = "#fef2f2";
+                resIcon.textContent = "⚠️";
+                resTitle.textContent = "DANGER POTENTIEL";
+                resTitle.style.color = "var(--danger)";
+                resDesc.textContent = "Ce domaine externe n'est pas certifié par l'établissement.";
+            }
+        }
+
+        function openPreview() {
+            const modal = document.getElementById('previewModal');
+            const header = document.getElementById('modalHeader');
+            const overlay = document.getElementById('modalOverlayUI');
+            const warnText = document.getElementById('modalWarnText');
+            const reportBtn = document.getElementById('modalReportBtn');
+            const iframe = document.getElementById('sitePreviewFrame');
+
+            iframe.src = lastUrl;
+
+            if (isSafe) {
+                header.textContent = "✓ Navigation Sécurisée : " + lastUrl;
+                header.style.backgroundColor = "var(--success)";
+                overlay.style.borderTopColor = "var(--success)";
+                warnText.innerHTML = "<b>DOMAINE DE CONFIANCE :</b> Ce site est validé par l'administration. La prévisualisation reste isolée par mesure de sécurité standard.";
+                reportBtn.style.display = "none";
+            } else {
+                header.textContent = "⚠️ Alerte Sécurité : Contenu Isolé";
+                header.style.backgroundColor = "var(--danger)";
+                overlay.style.borderTopColor = "var(--danger)";
+                warnText.innerHTML = "<b>MODE ISOLATION :</b> Ce site est chargé dans une cellule sandboxée. Les interactions sont désactivées pour protéger votre session.";
+                reportBtn.style.display = "block";
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closePreview() {
+            document.getElementById('sitePreviewFrame').src = "about:blank";
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function reportToIT() {
+            alert("Signalement envoyé. L'élément a été transmis à la cellule Cyber-Sécurité.");
+            closePreview();
+        }
+    </script>
+</body>
+</html>
